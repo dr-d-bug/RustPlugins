@@ -1,19 +1,22 @@
-﻿using Oxide.Core.Libraries.Covalence;
+﻿// using System;
+// using Oxide.Core;
+using Oxide.Core.Libraries.Covalence;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace Oxide.Plugins
 {
-    [Info("RustTools", "Dr.D.Bug", "0.0.1")]
-
+    [Info("RustTools", "Dr.D.Bug", "0.1.4")]
+    [Description("Collection of Chat-Commands - neither config nor perms required")]
+    // Minor Version 1 (1st release)
+    // Chamge-Log: 0.1.4: Players() - Concatenation with Separator and Trim by the end of the line by separator
     class RustTools : RustPlugin
     {
         public Dictionary<ulong, string> activplayers = new Dictionary<ulong, string>();
 
-        void Init()
+        static void Init()
         {
-            // Puts("RustTools geladen")
         }
 
         void SendMessage(BasePlayer player, string msg, params object[] args)
@@ -22,19 +25,19 @@ namespace Oxide.Plugins
         }
 
         [ChatCommand("players")]
-        void player(BasePlayer player)
+        void Players(BasePlayer player)
         {
+            char[] separator = {',', ' '};
             activplayers.Clear();
             StringBuilder sb = new StringBuilder();
-            sb.Append("Players online: ");
             List<BasePlayer> list = BasePlayer.activePlayerList.ToList();
+            sb.Append($"Players online({list.Count}): ");
             for (int i = 0; i < list.Count; i++)
             {
                 BasePlayer basePlayer = list[i];
-                // SendMessage(player, $"{basePlayer.displayName} ");
-                sb.Append($"{basePlayer.displayName} ");
+                sb.Append($" {basePlayer.displayName},");
             }
-            SendMessage(player, sb.ToString());
+            SendMessage(player, sb.ToString().TrimEnd(separator));
         }
 
     }
