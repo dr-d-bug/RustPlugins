@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("EntityInfo", "YourName", "1.0.0")]
+    [Info("EntityInfo", "Dr.D.Bug", "1.0.0")]
     [Description("Zeigt Informationen über die Entity an, die der Spieler anschaut")]
     public class EntityInfo : RustPlugin
     {
@@ -374,4 +374,5 @@ namespace Oxide.Plugins
         }
         #endregion
     }
+
 }
