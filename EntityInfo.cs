@@ -7,7 +7,7 @@ using Oxide.Game.Rust.Cui;
 
 namespace Oxide.Plugins
 {
-    [Info("EntityInfo", "Dr.D.Bug", "1.0.1")]
+    [Info("EntityInfo", "Dr.D.Bug", "1.0.2")]
     [Description("Zeigt den Spielernamen des Besitzers des angesehenen Bauteils an.")]
     public class EntityInfo : RustPlugin
     {
@@ -50,8 +50,10 @@ namespace Oxide.Plugins
 
         #region Data Storage
         private Dictionary<ulong, bool> playerStates = new Dictionary<ulong, bool>();
+        // Verwende playerTimers sowohl für periodische Updates als auch für den 5-Sekunden-Einmal-Timer.
         private Dictionary<ulong, Timer> playerTimers = new Dictionary<ulong, Timer>();
         private const string UI_NAME = "EntityInfoUI";
+        private const float OwnerDisplayDuration = 5f; // Sekunden, wie lange der Besitzername angezeigt wird
         #endregion
 
         #region Hooks
@@ -115,8 +117,10 @@ namespace Oxide.Plugins
 
         void StartTimer(BasePlayer player)
         {
+            // Stoppe ggf. vorhandenen Timer (periodisch oder einmalig)
             StopTimer(player.userID);
 
+            // Starte periodisches Abfragen, bis ein Besitzer gefunden wird.
             playerTimers[player.userID] = timer.Every(config.UpdateInterval, () =>
             {
                 if (player == null || !player.IsConnected || !playerStates.ContainsKey(player.userID) || !playerStates[player.userID])
@@ -148,16 +152,37 @@ namespace Oxide.Plugins
                 return;
             }
 
-            // Wenn die angesehene Entity einen Besitzer hat, zeige nur dessen Namen an.
+            // Wenn die angesehene Entity einen Besitzer hat, zeige dessen Namen an und deaktiviere die Funktion nach 5 Sekunden
             if (entity.OwnerID != 0)
             {
                 var ownerPlayer = BasePlayer.FindByID(entity.OwnerID);
                 string ownerName = ownerPlayer?.displayName ?? $"ID: {entity.OwnerID}";
                 ShowOwnerNameUI(player, ownerName);
+
+                // Stoppe den periodischen Timer und starte einen Einmal-Timer für 5 Sekunden,
+                // nach dessen Ablauf die Funktion deaktiviert wird.
+                StopTimer(player.userID);
+
+                // Falls bereits ein Timer existierte, wurde er gestoppt; setze jetzt den einmaligen Timer.
+                playerTimers[player.userID] = timer.Once(OwnerDisplayDuration, () =>
+                {
+                    // Suche den Spieler erneut (kann während der 5 Sekunden offline gegangen sein)
+                    var p = BasePlayer.FindByID(player.userID);
+                    if (p != null && p.IsConnected)
+                    {
+                        DisableEntityInfo(p);
+                        SendReply(p, $"Entity-Info wurde nach {OwnerDisplayDuration} Sekunden automatisch <color=red>deaktiviert</color>.");
+                    }
+                    else
+                    {
+                        // Spieler nicht mehr vorhanden -> nur aufräumen
+                        StopTimer(player.userID);
+                    }
+                });
             }
             else
             {
-                // Kein Besitzer: UI entfernen
+                // Kein Besitzer: UI entfernen (weiterhin periodisch weitersuchen)
                 DestroyUI(player);
             }
         }
